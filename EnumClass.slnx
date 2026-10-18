@@ -1,7 +1,10 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/EnumClass.Generator/EnumClass.Generator.csproj" />
-    <Project Path="src/Sample/Sample.csproj" />
-    <Project Path="src/Sample2/Sample2.csproj" />
+    <Project Path="src/Xtofs.EnumClass/Xtofs.EnumClass.csproj" />
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/Planets/Planets.csproj" />
+    <Project Path="samples/Chess/Chess.csproj" />
+    <Project Path="samples/GameOfAmazons/GameOfAmazons.csproj" />
   </Folder>
 </Solution>

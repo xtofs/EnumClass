@@ -7,15 +7,15 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace EnumClass.Generator
+namespace Xtofs.EnumClass.Generator
 {
     [Generator(LanguageNames.CSharp)]
     public sealed class EnumClassGenerator : IIncrementalGenerator
     {
-        public const string AttributeMetadataName = "EnumClass.EnumClassAttribute";
-        public const string DataPropertyName = "Data";
+        public const string AttributeMetadataName = "Xtofs.EnumClass.EnumClassAttribute";
+        public const string MembersPropertyName = "Members";
         public const string TableTypeName = "Table";
-        public const string IncludesAttributeNamespace = "EnumClass";
+        public const string IncludesAttributeNamespace = "Xtofs.EnumClass";
         public const string IncludesAttributeMetadataName = "IncludesAttribute`1";
 
         public void Initialize(IncrementalGeneratorInitializationContext context)
@@ -55,7 +55,7 @@ namespace EnumClass.Generator
         {
             "Count", "Ordinal", "Values", "Set", "Tag", "ToTag", "FromTag", "FromOrdinal", "TryFromOrdinal",
             "TryParse", "Parse", "TryParseLinear", "Equals", "GetHashCode", "ToString", "CompareTo",
-            "GetType", "MemberwiseClone", "Row", "Table", "Data", "GetAt",
+            "GetType", "MemberwiseClone", "Row", "Table", "Members", "GetAt",
             "PhfFold", "PhfDisplacements", "PhfSlots", "s_names", "s_values", "s_table", "_ordinal",
         };
 
@@ -155,16 +155,16 @@ namespace EnumClass.Generator
                 includesOk = false;
             }
 
-            // ---- Data: purely syntactic, since the generated Table type does not exist yet --
+            // ---- Members: purely syntactic, since the generated Table type does not exist yet --
             var dataDecls = type.DeclaringSyntaxReferences
                 .Select(r => r.GetSyntax(ct))
                 .OfType<TypeDeclarationSyntax>()
                 .SelectMany(t => t.Members)
                 .Where(m => m switch
                 {
-                    PropertyDeclarationSyntax p => p.Identifier.ValueText == EnumClassGenerator.DataPropertyName,
-                    MethodDeclarationSyntax md => md.Identifier.ValueText == EnumClassGenerator.DataPropertyName,
-                    FieldDeclarationSyntax f => f.Declaration.Variables.Any(v => v.Identifier.ValueText == EnumClassGenerator.DataPropertyName),
+                    PropertyDeclarationSyntax p => p.Identifier.ValueText == EnumClassGenerator.MembersPropertyName,
+                    MethodDeclarationSyntax md => md.Identifier.ValueText == EnumClassGenerator.MembersPropertyName,
+                    FieldDeclarationSyntax f => f.Declaration.Variables.Any(v => v.Identifier.ValueText == EnumClassGenerator.MembersPropertyName),
                     _ => false,
                 })
                 .ToList();
@@ -180,8 +180,8 @@ namespace EnumClass.Generator
                 var other = dataDecls[0];
                 diags.Add(DiagnosticInfo.Create(Diagnostics.UnsupportedDataShape, other.GetLocation(),
                     other is FieldDeclarationSyntax
-                        ? "Data must be a property, not a field: field initializers in different partial declarations run in unspecified order"
-                        : "Data must be a property: 'private static Table Data => new() { ... };'"));
+                        ? "Members must be a property, not a field: field initializers in different partial declarations run in unspecified order"
+                        : "Members must be a property: 'private static Table Members => new() { ... };'"));
                 return Result(false);
             }
 
@@ -189,7 +189,7 @@ namespace EnumClass.Generator
                 impl.Type is not IdentifierNameSyntax { Identifier.ValueText: EnumClassGenerator.TableTypeName })
             {
                 diags.Add(DiagnosticInfo.Create(Diagnostics.UnsupportedDataShape, impl.Identifier.GetLocation(),
-                    "Data must be declared as 'private static Table Data => new() { ... };'"));
+                    "Members must be declared as 'private static Table Members => new() { ... };'"));
                 return Result(false);
             }
 
@@ -197,7 +197,7 @@ namespace EnumClass.Generator
             if (initializer is null)
             {
                 diags.Add(DiagnosticInfo.Create(Diagnostics.UnsupportedDataShape, impl.GetLocation(),
-                    "Data must return a single object creation with an initializer: '=> new() { Member = new(...), ... }'"));
+                    "Members must return a single object creation with an initializer: '=> new() { Member = new(...), ... }'"));
                 return Result(false);
             }
 
@@ -211,7 +211,7 @@ namespace EnumClass.Generator
                     !assignment.IsKind(SyntaxKind.SimpleAssignmentExpression))
                 {
                     diags.Add(DiagnosticInfo.Create(Diagnostics.UnsupportedDataShape, expr.GetLocation(),
-                        "Each Data initializer entry must have the form 'Member = <expression>'"));
+                        "Each Members initializer entry must have the form 'Member = <expression>'"));
                     continue;
                 }
 
@@ -283,8 +283,8 @@ namespace EnumClass.Generator
         }
 
         /// <summary>
-        /// Accepts <c>Data =&gt; new() { ... }</c>, <c>Data { get =&gt; new() { ... }; }</c> and
-        /// <c>Data { get { return new() { ... }; } }</c> (also <c>new Table { ... }</c>).
+        /// Accepts <c>Members =&gt; new() { ... }</c>, <c>Members { get =&gt; new() { ... }; }</c> and
+        /// <c>Members { get { return new() { ... }; } }</c> (also <c>new Table { ... }</c>).
         /// </summary>
         internal static InitializerExpressionSyntax? GetObjectInitializer(PropertyDeclarationSyntax property)
         {

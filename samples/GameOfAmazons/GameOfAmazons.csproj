@@ -7,10 +7,11 @@
     <Nullable>enable</Nullable>
     <!-- Inspect output under obj/.../generated -->
     <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\EnumClass.Generator\EnumClass.Generator.csproj"
+    <ProjectReference Include="..\..\src\Xtofs.EnumClass\Xtofs.EnumClass.csproj"
                       OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 

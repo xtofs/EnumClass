@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace EnumClass.Generator
+namespace Xtofs.EnumClass.Generator
 {
     /// <summary>
     /// Compile-time construction of a minimal perfect hash (hash-and-displace,
@@ -16,7 +16,7 @@ namespace EnumClass.Generator
     /// a foreign key hitting one lands on some slot and fails the final comparison.
     ///
     /// IMPORTANT: <see cref="Hash"/> must stay bit-identical to
-    /// EnumClass.Internal.PerfectHash.Hash in <see cref="RuntimeSources.PerfectHash"/>.
+    /// Xtofs.EnumClass.Internal.PerfectHash.Hash in <see cref="RuntimeSources.PerfectHash"/>.
     /// </summary>
     internal static class PerfectHashBuilder
     {

@@ -1,5 +1,7 @@
-; Unshipped analyzer release
+; Shipped analyzer releases
 ; https://github.com/dotnet/roslyn-analyzers/blob/main/src/Microsoft.CodeAnalysis.Analyzers/ReleaseTrackingAnalyzers.Help.md
+
+## Release 0.1.0
 
 ### New Rules
 
@@ -10,8 +12,8 @@
 | EC007   | Design   | Error    | No members                               |
 | EC008   | Design   | Warning  | Members differ only by ASCII case        |
 | EC009   | Design   | Error    | Too many members                         |
-| EC010   | Design   | Error    | Missing Data() method                    |
-| EC011   | Design   | Error    | Unsupported Data() shape                 |
+| EC010   | Design   | Error    | Missing Members property                 |
+| EC011   | Design   | Error    | Unsupported Members shape                |
 | EC012   | Design   | Error    | Member name conflicts with another member |
 | EC013   | Design   | Error    | Duplicate value name                     |
 | EC014   | Design   | Error    | Invalid include                          |

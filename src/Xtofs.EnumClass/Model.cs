@@ -1,6 +1,6 @@
 using Microsoft.CodeAnalysis;
 
-namespace EnumClass.Generator
+namespace Xtofs.EnumClass.Generator
 {
     /// <summary>What one [EnumClass] declaration says on its own (before includes are resolved).</summary>
     internal sealed record TypeModel(
@@ -9,7 +9,7 @@ namespace EnumClass.Generator
         string Name,
         string FullName,                      // global::-qualified, key for resolving includes
         LocationInfo? Location,
-        EquatableArray<string> Usings,        // non-global usings in scope of Data, for doc-comment crefs
+        EquatableArray<string> Usings,        // non-global usings in scope of Members, for doc-comment crefs
         EquatableArray<DataPropertyModel> Properties,
         EquatableArray<MemberModel> Members,  // own values only
         EquatableArray<IncludeModel> Includes,
@@ -21,7 +21,7 @@ namespace EnumClass.Generator
     /// <param name="Modifiers">Copied verbatim from the defining declaration (partial members must match).</param>
     internal sealed record DataPropertyModel(string Modifiers, string Type, string Name);
 
-    /// <param name="DocLines">The member's <c>///</c> lines from the Data initializer, trimmed, without indentation.</param>
+    /// <param name="DocLines">The member's <c>///</c> lines from the Members initializer, trimmed, without indentation.</param>
     internal sealed record MemberModel(string Name, EquatableArray<string> DocLines);
 
     /// <summary>One <c>[Includes&lt;T&gt;]</c>.</summary>
@@ -61,7 +61,7 @@ namespace EnumClass.Generator
 
         public static readonly DiagnosticDescriptor NoMembers = new(
             "EC007", "No members",
-            "The Data initializer of '{0}' assigns no members",
+            "The Members initializer of '{0}' assigns no members",
             Category, DiagnosticSeverity.Error, isEnabledByDefault: true);
 
         public static readonly DiagnosticDescriptor CaseCollision = new(
@@ -75,12 +75,12 @@ namespace EnumClass.Generator
             Category, DiagnosticSeverity.Error, isEnabledByDefault: true);
 
         public static readonly DiagnosticDescriptor MissingData = new(
-            "EC010", "Missing Data property",
-            "'{0}' must declare 'private static Table Data => new() {{ Member = new(...), ... }};'",
+            "EC010", "Missing Members property",
+            "'{0}' must declare 'private static Table Members => new() {{ Member = new(...), ... }};'",
             Category, DiagnosticSeverity.Error, isEnabledByDefault: true);
 
         public static readonly DiagnosticDescriptor UnsupportedDataShape = new(
-            "EC011", "Unsupported Data shape",
+            "EC011", "Unsupported Members shape",
             "{0}",
             Category, DiagnosticSeverity.Error, isEnabledByDefault: true);
 

@@ -4,7 +4,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 
-namespace EnumClass.Generator
+namespace Xtofs.EnumClass.Generator
 {
     /// <summary>
     /// Flattens [Includes&lt;T&gt;]: a type's values are its own values (ordinals 0..k-1)

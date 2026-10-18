@@ -1,12 +1,12 @@
-namespace Sample;
+namespace Planets;
 
-using EnumClass;
+using Xtofs.EnumClass;
 
 [EnumClass]
 public readonly partial struct Planet
 {
     // Associated data: instance partial properties. Their declaration order is the
-    // parameter order of the generated Row constructor used in Data below.
+    // parameter order of the generated Row constructor used in Members below.
     /// <summary>Mass in kg.</summary>
     public partial double Mass { get; }
     /// <summary>Equatorial radius in m.</summary>
@@ -17,7 +17,7 @@ public readonly partial struct Planet
 
     // Members: one entry each; initializer order = ordinal.
     // Doc comments on entries are copied to the generated Planet.Mercury etc.
-    private static Table Data => new()
+    private static Table Members => new()
     {
         /// <summary>Innermost planet.</summary>
         Mercury = new(3.303e+23, 2.4397e6, false, TimeSpan.FromDays(87.969)),

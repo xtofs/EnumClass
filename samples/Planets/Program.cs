@@ -1,4 +1,4 @@
-using Sample;
+using Planets;
 
 Planet.Set inner = [Planet.Mercury, Planet.Venus, Planet.Earth, Planet.Mars]; // collection expression
 Planet.Set ringed = Planet.Jupiter | Planet.Saturn | Planet.Uranus | Planet.Neptune;

@@ -1,0 +1,59 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Analyzers/generators run inside the compiler host, which loads netstandard2.0. -->
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Xtofs.EnumClass.Generator</RootNamespace>
+    <AssemblyName>Xtofs.EnumClass</AssemblyName>
+    <IsRoslynComponent>true</IsRoslynComponent>
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <!-- NuGet package -->
+  <PropertyGroup>
+    <PackageId>Xtofs.EnumClass</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>Christof Sprenger</Authors>
+    <Copyright>Copyright (c) 2026 Christof Sprenger</Copyright>
+    <Description>C# source generator for data-carrying enums: closed sets of values with typed associated data, a strongly typed bit set, perfect-hash parsing, and superset types via [Includes&lt;T&gt;].</Description>
+    <PackageTags>source-generator;roslyn;enum;smart-enum;enumeration;bitset;perfect-hash</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <!-- TODO before publishing: set these once the repository is public.
+    <RepositoryUrl>https://github.com/xtofs/EnumClass</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/xtofs/EnumClass</PackageProjectUrl>
+    -->
+
+    <!-- Compile-time only: consumers get PrivateAssets="all" automatically, nothing flows to their dependents. -->
+    <DevelopmentDependency>true</DevelopmentDependency>
+    <!-- The assembly ships as an analyzer, not as a lib/ reference. -->
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <!-- NU5128: no lib/ folder is intentional for an analyzer-only package. -->
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 4.12 is the first Roslyn with partial-property symbol APIs (C# 13). -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.12.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Release tracking for the EC diagnostics (RS2000-RS2008). -->
+    <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
+    <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" Visible="false" />
+    <None Include="..\..\LICENSE" Pack="true" PackagePath="\" Visible="false" />
+  </ItemGroup>
+
+</Project>

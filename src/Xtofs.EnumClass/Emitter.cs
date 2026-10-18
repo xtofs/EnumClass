@@ -3,7 +3,7 @@ using System.Linq;
 
 using Microsoft.CodeAnalysis.CSharp;
 
-namespace EnumClass.Generator
+namespace Xtofs.EnumClass.Generator
 {
     internal static class Emitter
     {
@@ -43,12 +43,12 @@ namespace EnumClass.Generator
              .Line($"private {self}({ord} ordinal) => _ordinal = ordinal;")
              .Line()
              .Line(own == n
-                 ? "/// <summary>Zero-based index in the Data initializer. Note: <c>default</c> is the first value.</summary>"
-                 : "/// <summary>Own values first (Data initializer order), then each included block. Note: <c>default</c> is the first own value.</summary>")
+                 ? "/// <summary>Zero-based index in the Members initializer. Note: <c>default</c> is the first value.</summary>"
+                 : "/// <summary>Own values first (Members initializer order), then each included block. Note: <c>default</c> is the first own value.</summary>")
              .Line("public int Ordinal => _ordinal;")
              .Line();
 
-            // ---- members (doc comments copied from the Data initializer) ------
+            // ---- members (doc comments copied from the Members initializer) ------
             for (int i = 0; i < own; i++)
             {
                 foreach (var doc in m.Members[i].DocLines) o.Line(doc);
@@ -76,10 +76,10 @@ namespace EnumClass.Generator
              .Line();
 
             // ---- associated data ------------------------------------------------
-            // Columns are filled from Data once, during type initialization. s_table is
+            // Columns are filled from Members once, during type initialization. s_table is
             // declared first: field initializers run in textual order within one part.
             if (m.Properties.Length > 0)
-                o.Line($"private static readonly Table s_table = {DataName};").Line();
+                o.Line($"private static readonly Table s_table = {MembersName};").Line();
             foreach (var p in m.Properties)
             {
                 o.Line($"private static readonly {p.Type}[] s_{p.Name} = [{Join(m.Members.Select(x => $"s_table.{Id(x.Name)}.{Id(p.Name)}"))}];");
@@ -118,9 +118,9 @@ namespace EnumClass.Generator
             return o.ToString();
         }
 
-        private const string DataName = EnumClassGenerator.DataPropertyName;
+        private const string MembersName = EnumClassGenerator.MembersPropertyName;
 
-        /// <summary>Row and Table, the input types of the user's Data property.</summary>
+        /// <summary>Row and Table, the input types of the user's Members property.</summary>
         private static void EmitDataInput(Writer o, TypeModel m)
         {
             var props = m.Properties;
@@ -135,7 +135,7 @@ namespace EnumClass.Generator
             }
             o.Close().Line();
 
-            o.Line($"/// <summary>Input to <see cref=\"{DataName}\"/>: one property per member, generated from its initializer.</summary>");
+            o.Line($"/// <summary>Input to <see cref=\"{MembersName}\"/>: one property per member, generated from its initializer.</summary>");
             o.Open($"private sealed class {EnumClassGenerator.TableTypeName}");
             foreach (var x in m.Members) o.Line($"public Row {Id(x.Name)} {{ get; init; }}");
             o.Close().Line();
@@ -194,7 +194,7 @@ namespace EnumClass.Generator
             else
             {
                 if (!m.PhfFold) o.Line("if (ignoreCase) return TryParseLinear(name, true, out value);");
-                o.Line("int ordinal = PhfSlots[global::EnumClass.Internal.PerfectHash.Slot(name, PhfDisplacements, PhfFold)];")
+                o.Line("int ordinal = PhfSlots[global::Xtofs.EnumClass.Internal.PerfectHash.Slot(name, PhfDisplacements, PhfFold)];")
                  .Line("string candidate = s_names[ordinal];")
                  .Line("if (ignoreCase")
                  .Line($"        ? {Sys}.Text.Ascii.EqualsIgnoreCase(name, candidate)")

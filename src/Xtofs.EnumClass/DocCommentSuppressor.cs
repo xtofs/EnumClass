@@ -6,11 +6,11 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 
-namespace EnumClass.Generator
+namespace Xtofs.EnumClass.Generator
 {
     /// <summary>
     /// Suppresses CS1587 ("XML comment is not placed on a valid language element") for
-    /// <c>///</c> comments on entries of an [EnumClass] Data initializer. The generator
+    /// <c>///</c> comments on entries of an [EnumClass] Members initializer. The generator
     /// copies those comments onto the generated member properties, so they are not lost.
     /// </summary>
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
@@ -19,7 +19,7 @@ namespace EnumClass.Generator
         internal static readonly SuppressionDescriptor Rule = new(
             id: "ECSPR001",
             suppressedDiagnosticId: "CS1587",
-            justification: "Doc comments on EnumClass Data entries are copied to the generated members.");
+            justification: "Doc comments on EnumClass Members entries are copied to the generated members.");
 
         public override ImmutableArray<SuppressionDescriptor> SupportedSuppressions => ImmutableArray.Create(Rule);
 
@@ -42,7 +42,7 @@ namespace EnumClass.Generator
 
                 var property = initializer.FirstAncestorOrSelf<PropertyDeclarationSyntax>();
                 if (property is null ||
-                    property.Identifier.ValueText != EnumClassGenerator.DataPropertyName ||
+                    property.Identifier.ValueText != EnumClassGenerator.MembersPropertyName ||
                     ModelBuilder.GetObjectInitializer(property) != initializer ||
                     property.Parent is not TypeDeclarationSyntax typeDecl)
                     continue;

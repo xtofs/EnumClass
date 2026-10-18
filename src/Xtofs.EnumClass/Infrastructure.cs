@@ -14,7 +14,7 @@ namespace System.Runtime.CompilerServices
     internal static class IsExternalInit { }
 }
 
-namespace EnumClass.Generator
+namespace Xtofs.EnumClass.Generator
 {
     /// <summary>Value-equality wrapper so incremental-pipeline models cache correctly.</summary>
     internal readonly struct EquatableArray<T> : IEquatable<EquatableArray<T>>, IEnumerable<T>

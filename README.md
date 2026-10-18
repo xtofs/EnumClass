@@ -1,7 +1,25 @@
-# EnumClass — a source generator for data-carrying enums
+# Xtofs.EnumClass — a source generator for data-carrying enums
 
 A `readonly partial struct` marked `[EnumClass]` becomes a closed set of members,
 each with typed associated data, plus a strongly typed bit set over those members.
+
+## Installation
+
+```xml
+<PackageReference Include="Xtofs.EnumClass" Version="0.1.0" />
+```
+
+The package is a development dependency: it contains only the generator (under
+`analyzers/dotnet/cs`), adds nothing to your output assembly's references, and
+does not flow to projects that reference yours. The attributes are generated
+into your project (`internal`) in the namespace `Xtofs.EnumClass`:
+
+```csharp
+using Xtofs.EnumClass;
+```
+
+Requires a C# 13 compiler (.NET SDK 9.0.100+ / Visual Studio 17.12+) and a
+.NET 8+ target framework.
 
 ## Authoring surface
 
@@ -12,7 +30,7 @@ public readonly partial struct Planet
     public partial double Mass { get; }               // data properties: their declaration
     public partial TimeSpan OrbitalPeriod { get; }    // order is the Row parameter order
 
-    private static Table Data => new()
+    private static Table Members => new()
     {
         /// <summary>Innermost planet.</summary>       // copied to Planet.Mercury
         Mercury = new(3.303e+23, TimeSpan.FromDays(87.969)),
@@ -29,9 +47,9 @@ public readonly partial struct Planet
   property. The `DocCommentSuppressor` shipped with the generator suppresses the
   resulting CS1587 only at those positions. The user's `using` directives are copied
   into the generated file, so `cref`s bind as written.
-- `Data` is an ordinary (non-partial) static property. `=> new() { ... }`,
+- `Members` is an ordinary (non-partial) static property. `=> new() { ... }`,
   `{ get => ...; }` and `{ get { return new Table { ... }; } }` are accepted.
-  It must not be a field: its initializer and the generated `s_table = Data`
+  It must not be a field: its initializer and the generated `s_table = Members`
   would sit in different partial declarations, whose initializer order is unspecified.
 
 ## Supersets: `[Includes<T>]`
@@ -43,7 +61,7 @@ A type can contain all values of other EnumClass types, plus its own:
 [Includes<Piece>]
 public readonly partial struct Occupancy
 {
-    private static Table Data => new() { Empty = new() };
+    private static Table Members => new() { Empty = new() };
 }
 ```
 
@@ -59,7 +77,7 @@ public readonly partial struct Occupancy
   so one `switch` on `ToTag()` handles every case.
 - **Includes nest:** including `Occupancy` brings in its `Empty` and all of `Piece`'s
   values. Widening is one step: `Cell c = (Occupancy)Piece.BlackPawn;`.
-- **Where `T` lives:** in the same compilation (resolved from `T`'s own `Data`
+- **Where `T` lives:** in the same compilation (resolved from `T`'s own `Members`
   initializer, since its generated members do not exist yet) or in a referenced
   assembly (read from its public `Tag` enum).
 - **Not supported (EC015):** data properties on a type with includes, since included
@@ -75,9 +93,9 @@ All of it lands in `<Namespace>.<Type>.EnumClass.g.cs` as part of the same struc
 |---|---|---|
 | Representation | single `byte` (≤ 256 members) or `ushort` field | 1–2 bytes, no allocation |
 | Members | `public static Planet Earth => new(2);` | constant |
-| `Row`, `Table` | private input types of `Data`; `Table` has one `Row` property per entry | — |
+| `Row`, `Table` | private input types of `Members`; `Table` has one `Row` property per entry | — |
 | Associated-data property | `get => GetAt(s_Mass)`: array load via `Unsafe.Add`, no bounds check | one load |
-| Columns | filled once from `Data` during type initialization | n·k copies, once |
+| Columns | filled once from `Members` during type initialization | n·k copies, once |
 | `Name` / `ToString()` | member identifier (unless you declare `Name` yourself) | one load |
 | `Values`, `Count`, `Ordinal`, `FromOrdinal`, `TryFromOrdinal` | | |
 | `Tag` | nested plain `enum` mirror for constant-pattern `switch` | |
@@ -116,11 +134,11 @@ benchmark against a plain `switch` before relying on it.
 |---|---|---|
 | EC001 | Error | Target is not a non-nested, non-generic `readonly partial struct` |
 | EC005 | Error | Associated-data property has a setter or is an indexer |
-| EC007 | Error | `Data` initializer assigns no members |
+| EC007 | Error | `Members` initializer assigns no members |
 | EC008 | Warning | Members differ only by ASCII case |
 | EC009 | Error | More than 65 536 members |
-| EC010 | Error | No `Data` property |
-| EC011 | Error | `Data` is not a static property returning one object creation with `Name = expr` entries (a field or method is rejected too) |
+| EC010 | Error | No `Members` property |
+| EC011 | Error | `Members` is not a static property returning one object creation with `Name = expr` entries (a field or method is rejected too) |
 | EC012 | Error | Member name collides with the type, a data property, an existing or a generated member |
 | EC013 | Error | A value name occurs twice (own and included, or in two included types) |
 | EC014 | Error | Invalid include: not an EnumClass, has errors, included twice, cycle, or two included types with the same simple name |
@@ -133,31 +151,49 @@ arity by ordinary overload resolution on `Row`'s constructor.
 
 - `default(Planet)` is the first member (like `enum` value 0). To make `default`
   invalid instead, store `ordinal + 1` and add a check in `GetAt`.
-- The `Data` getter runs **once**, during type initialization. The type is `beforefieldinit`,
+- The `Members` getter runs **once**, during type initialization. The type is `beforefieldinit`,
   so the runtime runs it no later than the first static-field access (data
   properties, `Name`, `ToString`, `Values`, `TryParse`), possibly earlier; getting a
-  member (`Planet.Earth`) does not itself require it. An exception in `Data`
+  member (`Planet.Earth`) does not itself require it. An exception in `Members`
   surfaces as `TypeInitializationException` and leaves the type unusable.
-- Inside `Data`, referring to members (`Next = Planet.Earth`) is fine; reading
+- Inside `Members`, referring to members (`Next = Planet.Earth`) is fine; reading
   their **data** (`Planet.Earth.Mass`) is not — the columns are not filled yet.
 - Static field initializers in *your* part of the struct must not read data
   properties either: the order of initializers across partial declarations is
   unspecified.
-- `Data` must be `private`, because `Table` and `Row` are private (anything wider
+- `Members` must be `private`, because `Table` and `Row` are private (anything wider
   is CS0050).
 - `ignoreCase` folds **ASCII letters only** — not `StringComparison.OrdinalIgnoreCase`
   (which also equates e.g. U+212A KELVIN SIGN with `k`).
 - Members are emitted as plain static properties, so F12 on `Planet.Earth` lands in
   the generated file; hover shows the copied doc comment.
-- Generated helpers (`EnumClass.Internal.PerfectHash`, attributes) are `internal`;
+- Generated helpers (`Xtofs.EnumClass.Internal.PerfectHash`, attributes) are `internal`;
   two assemblies with `InternalsVisibleTo` between them will see CS0436 duplicates.
   On Roslyn ≥ 4.14, `AddEmbeddedAttributeDefinition()` + `[Embedded]` fixes that.
 
-## Requirements
+## Repository layout
 
-Generator: `netstandard2.0`, Microsoft.CodeAnalysis.CSharp ≥ 4.12 (partial-property
-symbol APIs). Consumer: C# 13+ and .NET 8+ (`Ascii`, `CollectionBuilder`,
-`MemoryMarshal.GetArrayDataReference`).
+| Path | Contents |
+|---|---|
+| `src/Xtofs.EnumClass` | The generator and suppressor (`netstandard2.0`, Microsoft.CodeAnalysis.CSharp 4.12) |
+| `samples/Planets` | `Planet`: data properties, including non-constant `TimeSpan` values; sets, parsing, `Tag` |
+| `samples/Chess` | `Piece` with data, and `Occupancy` = `Empty` + every `Piece` via `[Includes<Piece>]` |
+| `samples/GameOfAmazons` | `Square` = `Empty`, `Fire` + every `Amazon`; set tests for blocked squares |
+
+The samples reference the generator as a project (`OutputItemType="Analyzer"`).
+
+## Packaging and publishing
+
+```sh
+dotnet pack src/Xtofs.EnumClass -c Release -o artifacts
+dotnet nuget push artifacts/Xtofs.EnumClass.0.1.0.nupkg \
+    --api-key <key> --source https://api.nuget.org/v3/index.json
+```
+
+Diagnostics shipped in a release move from `AnalyzerReleases.Unshipped.md` to
+`AnalyzerReleases.Shipped.md` under a `## Release x.y.z` heading (0.1.0 is recorded).
+Once the repository is public, set `RepositoryUrl` / `PackageProjectUrl` in the
+project file.
 
 ## Natural next steps
 
