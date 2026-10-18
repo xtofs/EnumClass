@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x   # samples target net10.0; the generator itself is netstandard2.0
+
+      - name: Build generator and samples
+        run: dotnet build EnumClass.slnx -c Release
+
+      - name: Run samples
+        run: |
+          dotnet run --project samples/Planets -c Release --no-build
+          dotnet run --project samples/Chess -c Release --no-build
+          dotnet run --project samples/GameOfAmazons -c Release --no-build
+
+      - name: Pack
+        run: dotnet pack src/Xtofs.EnumClass -c Release -o artifacts
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nupkg
+          path: artifacts/*.nupkg

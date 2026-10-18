@@ -76,7 +76,7 @@ namespace Xtofs.EnumClass.Generator
 
         public static readonly DiagnosticDescriptor MissingData = new(
             "EC010", "Missing Members property",
-            "'{0}' must declare 'private static Table Members => new() {{ Member = new(...), ... }};'",
+            "'{0}' must declare `private static Table Members => new() {{  {{ Member = new(…), … }}; }}`",
             Category, DiagnosticSeverity.Error, isEnabledByDefault: true);
 
         public static readonly DiagnosticDescriptor UnsupportedDataShape = new(

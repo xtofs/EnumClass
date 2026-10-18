@@ -184,11 +184,22 @@ The samples reference the generator as a project (`OutputItemType="Analyzer"`).
 
 ## Packaging and publishing
 
-```sh
-dotnet pack src/Xtofs.EnumClass -c Release -o artifacts
-dotnet nuget push artifacts/Xtofs.EnumClass.0.1.0.nupkg \
-    --api-key <key> --source https://api.nuget.org/v3/index.json
-```
+`.github/workflows/ci.yml` builds the generator and samples, runs the samples and
+packs on every push to `main` and every pull request; the `.nupkg` is uploaded as
+a build artifact.
+
+`.github/workflows/publish.yml` publishes when a `v*` tag is pushed, using NuGet
+[trusted publishing](https://learn.microsoft.com/nuget/nuget-org/trusted-publishing)
+(GitHub OIDC → a NuGet API key valid for one hour; no secret API key is stored).
+The package version is taken from the tag (`v0.1.0` → `0.1.0`). One-time setup:
+
+1. On nuget.org, under your user name → **Trusted Publishing**, add a policy:
+   repository owner and repository name of this repo, workflow file `publish.yml`.
+2. In the GitHub repository settings, add the secret `NUGET_USER` with your
+   nuget.org profile name (not your email address).
+3. Then: `git tag v0.1.0 && git push origin v0.1.0`.
+
+To pack locally: `dotnet pack src/Xtofs.EnumClass -c Release -o artifacts`.
 
 Diagnostics shipped in a release move from `AnalyzerReleases.Unshipped.md` to
 `AnalyzerReleases.Shipped.md` under a `## Release x.y.z` heading (0.1.0 is recorded).
