@@ -2,5 +2,6 @@
   <Folder Name="/src/">
     <Project Path="src/EnumClass.Generator/EnumClass.Generator.csproj" />
     <Project Path="src/Sample/Sample.csproj" />
+    <Project Path="src/Sample2/Sample2.csproj" />
   </Folder>
 </Solution>

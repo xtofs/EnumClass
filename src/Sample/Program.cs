@@ -10,7 +10,7 @@ Console.WriteLine(inner);                                    // [Mercury, Venus,
 
 foreach (var p in Planet.Values)
 {
-    Console.WriteLine($"{p.Name,-8} g = {p.SurfaceGravity:F2} m/s²");
+    Console.WriteLine($"{p.Name,-8} g = {p.SurfaceGravity:F2} m/s², year = {p.OrbitalPeriod.TotalDays:F0} d");
 }
 
 if (Planet.TryParse("saturn", ignoreCase: true, out var s))

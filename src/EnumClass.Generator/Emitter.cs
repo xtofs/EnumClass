@@ -11,9 +11,11 @@ namespace EnumClass.Generator
         private const string Inline =
             "[global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]";
 
-        public static string Emit(TypeModel m)
+        public static string Emit(EmitModel e)
         {
-            int n = m.Members.Length;
+            var m = e.Type;
+            int n = e.AllNames.Length;                   // own values + all included blocks
+            int own = m.Members.Length;
             string self = m.Name;
             string ord = n <= 256 ? "byte" : "ushort";
             int k = (n + 63) / 64;                       // 64-bit words in a Set
@@ -25,31 +27,44 @@ namespace EnumClass.Generator
              .Line("#pragma warning disable CS1591")
              .Line();
             if (m.Namespace is not null) o.Line($"namespace {m.Namespace};").Line();
+            // The user's usings, so that crefs in copied member doc comments bind as written.
+            // Everything generated below is fully qualified and unaffected by them.
+            foreach (var u in m.Usings) o.Line(u);
+            if (m.Usings.Length > 0) o.Line();
 
             o.Line($"[{Sys}.Diagnostics.DebuggerDisplay(\"{{ToString(),nq}}\")]");
             o.Open($"readonly partial struct {self} : {Sys}.IEquatable<{self}>, {Sys}.IComparable<{self}>");
 
             // ---- representation -------------------------------------------------
-            o.Line("/// <summary>Number of members.</summary>")
+            o.Line(own == n ? "/// <summary>Number of values.</summary>" : "/// <summary>Number of values, own and included.</summary>")
              .Line($"public const int Count = {n};")
              .Line()
              .Line($"private readonly {ord} _ordinal;")
              .Line($"private {self}({ord} ordinal) => _ordinal = ordinal;")
              .Line()
-             .Line("/// <summary>Zero-based declaration index. Note: <c>default</c> is the first member.</summary>")
+             .Line(own == n
+                 ? "/// <summary>Zero-based index in the Data initializer. Note: <c>default</c> is the first value.</summary>"
+                 : "/// <summary>Own values first (Data initializer order), then each included block. Note: <c>default</c> is the first own value.</summary>")
              .Line("public int Ordinal => _ordinal;")
              .Line();
 
-            // ---- members --------------------------------------------------------
-            for (int i = 0; i < n; i++)
-                o.Line($"{m.Members[i].Modifiers} {self} {m.Members[i].Name} {{ get => new({i}); }}");
+            // ---- members (doc comments copied from the Data initializer) ------
+            for (int i = 0; i < own; i++)
+            {
+                foreach (var doc in m.Members[i].DocLines) o.Line(doc);
+                o.Line($"public static {self} {Id(m.Members[i].Name)} => new({i});");
+            }
             o.Line();
 
+            EmitDataInput(o, m);
+
             // ---- tables ---------------------------------------------------------
-            o.Line($"private static readonly string[] s_names = [{Join(m.Members.Select(x => Quote(x.Name)))}];");
+            EmitIncludes(o, e, self, ord);
+
+            o.Line($"private static readonly string[] s_names = [{Join(e.AllNames.Select(Quote))}];");
             o.Line($"private static readonly {self}[] s_values = [{Join(Enumerable.Range(0, n).Select(i => $"new({i})"))}];");
             o.Line()
-             .Line("/// <summary>All members in declaration order.</summary>")
+             .Line("/// <summary>All values in ordinal order.</summary>")
              .Line($"public static {Sys}.ReadOnlySpan<{self}> Values => s_values;")
              .Line();
 
@@ -61,11 +76,14 @@ namespace EnumClass.Generator
              .Line();
 
             // ---- associated data ------------------------------------------------
-            for (int j = 0; j < m.Properties.Length; j++)
+            // Columns are filled from Data once, during type initialization. s_table is
+            // declared first: field initializers run in textual order within one part.
+            if (m.Properties.Length > 0)
+                o.Line($"private static readonly Table s_table = {DataName};").Line();
+            foreach (var p in m.Properties)
             {
-                var p = m.Properties[j];
-                o.Line($"private static readonly {p.Type}[] s_{p.Name} = [{Join(m.Members.Select(x => x.Values[j]))}];");
-                o.Line($"{p.Modifiers} {p.Type} {p.Name} {{ get => GetAt(s_{p.Name}); }}");
+                o.Line($"private static readonly {p.Type}[] s_{p.Name} = [{Join(m.Members.Select(x => $"s_table.{Id(x.Name)}.{Id(p.Name)}"))}];");
+                o.Line($"{p.Modifiers} {p.Type} {Id(p.Name)} {{ get => GetAt(s_{p.Name}); }}");
                 o.Line();
             }
 
@@ -77,7 +95,7 @@ namespace EnumClass.Generator
             // ---- switchable tag -------------------------------------------------
             o.Line("/// <summary>A plain enum mirroring the members, for <c>switch</c> with constant patterns.</summary>");
             o.Open($"public enum Tag : {ord}");
-            for (int i = 0; i < n; i++) o.Line($"{m.Members[i].Name} = {i},");
+            for (int i = 0; i < n; i++) o.Line($"{Id(e.AllNames[i])} = {i},");
             o.Close();
             o.Line("public Tag ToTag() => (Tag)_ordinal;");
             o.Line($"public static {self} FromTag(Tag tag) => FromOrdinal((int)tag);").Line();
@@ -92,15 +110,66 @@ namespace EnumClass.Generator
              .Line("return false;")
              .Close().Line();
 
-            EmitParsing(o, m, self, ord);
+            EmitParsing(o, e, self, ord);
             EmitEquality(o, self, ord);
-            EmitSet(o, m, self, ord, n, k, w);
+            EmitSet(o, e, self, ord, n, k, w);
 
             o.Close();
             return o.ToString();
         }
 
-        private static void EmitParsing(Writer o, TypeModel m, string self, string ord)
+        private const string DataName = EnumClassGenerator.DataPropertyName;
+
+        /// <summary>Row and Table, the input types of the user's Data property.</summary>
+        private static void EmitDataInput(Writer o, TypeModel m)
+        {
+            var props = m.Properties;
+
+            o.Line("/// <summary>One member's data; constructor parameters follow data-property declaration order.</summary>");
+            o.Open("private readonly struct Row");
+            foreach (var p in props) o.Line($"public readonly {p.Type} {Id(p.Name)};");
+            if (props.Length > 0)
+            {
+                o.Line($"public Row({Join(props.Select(p => $"{p.Type} {Id(p.Name)}"))})");
+                o.Line($"{{ {string.Join(" ", props.Select(p => $"this.{Id(p.Name)} = {Id(p.Name)};"))} }}");
+            }
+            o.Close().Line();
+
+            o.Line($"/// <summary>Input to <see cref=\"{DataName}\"/>: one property per member, generated from its initializer.</summary>");
+            o.Open($"private sealed class {EnumClassGenerator.TableTypeName}");
+            foreach (var x in m.Members) o.Line($"public Row {Id(x.Name)} {{ get; init; }}");
+            o.Close().Line();
+
+        }
+
+        /// <summary>Widening/narrowing between this type and each included type.</summary>
+        private static void EmitIncludes(Writer o, EmitModel e, string self, string ord)
+        {
+            foreach (var inc in e.Includes)
+            {
+                string t = inc.FullName, s = inc.SimpleName;
+                string range = $"ordinals {inc.Offset}..{inc.Offset + inc.Count - 1}";
+                o.Line($"/// <summary>Every <see cref=\"{inc.DisplayName}\"/> value is a <see cref=\"{self}\"/> value ({range}).</summary>")
+                 .Line($"public static implicit operator {self}({t} value) => new(({ord})(value.Ordinal + {inc.Offset}));")
+                 .Line($"/// <exception cref=\"{Sys}.InvalidCastException\">The value is not a <see cref=\"{inc.DisplayName}\"/>.</exception>")
+                 .Line($"public static explicit operator {t}({self} value) =>")
+                 .Line($"    value.TryGet{s}(out var v) ? v : throw new {Sys}.InvalidCastException($\"{{value}} is not a {s}.\");")
+                 .Line($"/// <summary>Whether this value is a <see cref=\"{inc.DisplayName}\"/> ({range}).</summary>")
+                 .Line($"public bool Is{s} => (uint)(_ordinal - {inc.Offset}) < {inc.Count}u;");
+                o.Open($"public bool TryGet{s}(out {t} value)")
+                 .Line($"int i = _ordinal - {inc.Offset};")
+                 .Line($"if ((uint)i < {inc.Count}u) {{ value = {t}.FromOrdinal(i); return true; }}")
+                 .Line("value = default;")
+                 .Line("return false;")
+                 .Close().Line();
+            }
+        }
+
+        /// <summary>Escapes reserved keywords (<c>@class</c>).</summary>
+        private static string Id(string name) =>
+            SyntaxFacts.GetKeywordKind(name) != SyntaxKind.None ? "@" + name : name;
+
+        private static void EmitParsing(Writer o, EmitModel m, string self, string ord)
         {
             bool phf = m.PhfDisplacements.Length > 0;
             string ros = $"{Sys}.ReadOnlySpan<char>";
@@ -173,7 +242,7 @@ namespace EnumClass.Generator
              .Line();
         }
 
-        private static void EmitSet(Writer o, TypeModel m, string self, string ord, int n, int k, string[] w)
+        private static void EmitSet(Writer o, EmitModel m, string self, string ord, int n, int k, string[] w)
         {
             string[] masks = Enumerable.Range(0, k).Select(i =>
             {
@@ -261,6 +330,15 @@ namespace EnumClass.Generator
              .Line("public static bool operator !=(Set a, Set b) => !a.Equals(b);")
              .Line();
 
+            o.Line("/// <summary>Number of 64-bit words; bit i of word j is ordinal 64·j + i.</summary>")
+             .Line($"public const int WordCount = {k};")
+             .Line($"public ulong GetWord(int index) => index switch {{ {Each(i => $"{i} => {w[i]}")}, _ => throw new {Sys}.ArgumentOutOfRangeException(nameof(index)) }};")
+             .Line("/// <summary>Missing words are zero; bits beyond <see cref=\"Count\"/> values are cleared.</summary>")
+             .Line($"public static Set FromWords({Sys}.ReadOnlySpan<ulong> words) => new({Each(i => $"words.Length > {i} ? words[{i}] & {masks[i]} : 0UL")});")
+             .Line();
+
+            EmitSetIncludes(o, m, self, k, w);
+
             if (k == 1)
             {
                 o.Line("/// <summary>Raw bits (bit i = ordinal i), e.g. for persistence.</summary>")
@@ -292,6 +370,43 @@ namespace EnumClass.Generator
              .Close()
              .Close()
              .Close();
+        }
+
+        /// <summary>
+        /// Set conversions for each included block at bit offset <c>off</c>: widening shifts the
+        /// included set's words left by <c>off</c>, narrowing shifts right and lets FromWords mask
+        /// the last word. Offsets are constants, so every word is one or two shifts.
+        /// </summary>
+        private static void EmitSetIncludes(Writer o, EmitModel m, string self, int k, string[] w)
+        {
+            foreach (var inc in m.Includes)
+            {
+                string t = inc.FullName, s = inc.SimpleName;
+                int kj = (inc.Count + 63) / 64;
+                var parts = Enumerable.Range(0, k).Select(_ => new System.Collections.Generic.List<string>()).ToArray();
+                for (int j = 0; j < kj; j++)
+                {
+                    int start = inc.Offset + 64 * j, w0 = start >> 6, r = start & 63;
+                    parts[w0].Add(r == 0 ? $"s{j}" : $"(s{j} << {r})");
+                    if (r != 0 && w0 + 1 < k) parts[w0 + 1].Add($"(s{j} >> {64 - r})");
+                }
+
+                o.Line($"public static implicit operator Set({t} value) => Of(({self})value);");
+                o.Open($"public static implicit operator Set({t}.Set value)")
+                 .Line($"ulong {string.Join(", ", Enumerable.Range(0, kj).Select(j => $"s{j} = value.GetWord({j})"))};")
+                 .Line($"return new({string.Join(", ", parts.Select(p => p.Count == 0 ? "0UL" : string.Join(" | ", p)))});")
+                 .Close();
+
+                var words = Enumerable.Range(0, kj).Select(j =>
+                {
+                    int start = inc.Offset + 64 * j, w0 = start >> 6, r = start & 63;
+                    if (r == 0) return w[w0];
+                    return w0 + 1 < k ? $"({w[w0]} >> {r}) | ({w[w0 + 1]} << {64 - r})" : $"{w[w0]} >> {r}";
+                });
+                o.Line($"/// <summary>The <see cref=\"{inc.DisplayName}\"/> values in this set.</summary>")
+                 .Line($"public {t}.Set To{s}Set() => {t}.Set.FromWords([{Join(words)}]);")
+                 .Line();
+            }
         }
 
         private static string Join(System.Collections.Generic.IEnumerable<string> items) => string.Join(", ", items);

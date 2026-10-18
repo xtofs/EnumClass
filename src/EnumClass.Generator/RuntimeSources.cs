@@ -9,26 +9,37 @@ namespace EnumClass.Generator
             namespace EnumClass
             {
                 /// <summary>
-                /// Marks a <c>readonly partial struct</c> as a data enum. Declare data as
-                /// <c>public partial T Prop { get; }</c> and members as
-                /// <c>[Member(...)] public static partial Self Name { get; }</c>.
+                /// Marks a <c>readonly partial struct</c> as an enum class.
+                /// Declare associated data as instance partial properties
+                /// (<c>public partial T Prop { get; }</c>) and the members, with their data,
+                /// in a single initializer:
+                /// <code>
+                /// private static Table Data => new()
+                /// {
+                ///     Mercury = new(3.303e23, 2.4397e6),
+                ///     Earth   = new(Mass: 5.976e24, Radius: 6.37814e6),
+                /// };
+                /// </code>
+                /// Initializer order defines ordinals; <c>///</c> comments on an entry are
+                /// copied to the generated member. <c>Table</c> and <c>Row</c> (constructor
+                /// parameters in data-property declaration order) are generated.
                 /// </summary>
                 [global::System.AttributeUsage(global::System.AttributeTargets.Struct, Inherited = false)]
                 [global::System.Diagnostics.Conditional("EnumClass_KEEP_ATTRIBUTES")]
                 internal sealed class EnumClassAttribute : global::System.Attribute { }
 
                 /// <summary>
-                /// Declares a member. Values bind positionally to the instance partial
-                /// properties, in declaration order. Values must be attribute constants
-                /// (primitives, string, enum, typeof, 1-D arrays thereof, null).
+                /// Makes every value of the [EnumClass] type <typeparamref name="T"/> a value of the
+                /// annotated [EnumClass] type, which then is a superset of <typeparamref name="T"/>.
+                /// The annotated type's own values (its Data initializer) keep ordinals 0..k-1, so
+                /// <c>default</c> is its first own value; each included type's values follow as one
+                /// contiguous block, in attribute order (declare all [Includes] on one declaration).
+                /// Generated per include: implicit widening from T and T.Set, an explicit narrowing
+                /// cast, <c>IsT</c>, <c>TryGetT(out T)</c> and <c>Set.ToTSet()</c>.
                 /// </summary>
-                [global::System.AttributeUsage(global::System.AttributeTargets.Property, Inherited = false)]
+                [global::System.AttributeUsage(global::System.AttributeTargets.Struct, AllowMultiple = true, Inherited = false)]
                 [global::System.Diagnostics.Conditional("EnumClass_KEEP_ATTRIBUTES")]
-                internal sealed class MemberAttribute : global::System.Attribute
-                {
-                    public MemberAttribute(params object?[] values) => Values = values;
-                    public object?[] Values { get; }
-                }
+                internal sealed class IncludesAttribute<T> : global::System.Attribute where T : struct { }
             }
             """;
 
