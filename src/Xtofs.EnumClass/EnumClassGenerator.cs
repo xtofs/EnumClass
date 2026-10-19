@@ -55,7 +55,7 @@ namespace Xtofs.EnumClass.Generator
         {
             "Count", "Ordinal", "Values", "Set", "Tag", "ToTag", "FromTag", "FromOrdinal", "TryFromOrdinal",
             "TryParse", "Parse", "TryParseLinear", "Equals", "GetHashCode", "ToString", "CompareTo",
-            "GetType", "MemberwiseClone", "Row", "Table", "Members", "GetAt",
+            "GetType", "MemberwiseClone", "Row", "Table", "Members", "GetFrom",
             "PhfFold", "PhfDisplacements", "PhfSlots", "s_names", "s_values", "s_table", "_ordinal",
         };
 

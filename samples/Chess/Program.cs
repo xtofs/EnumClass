@@ -18,7 +18,7 @@ internal class Program
         // Supersets via [Includes<T>]
         var board = new Occupancy[64];                  // all Empty: Empty has ordinal 0
         board[4] = Piece.WhiteKing;                     // implicit widening
-        if (board[4].TryGetPiece(out piece))        // narrowing
+        if (board[4].TryGetPiece(out piece))            // narrowing
         {
             Console.WriteLine($"e1: is {piece} ({piece.Color})");
         }
@@ -30,11 +30,13 @@ internal class Program
 
 
         Console.WriteLine("\n## Set widening");
-        Piece.Set whites = [Piece.WhiteKing, Piece.WhiteQueen];
-        Occupancy.Set occupied = whites; // set widening (is implemented as shift)
+        Piece.Set important = [Piece.WhiteKing, Piece.WhiteQueen];
+        Occupancy.Set occupied = important; // set widening (is implemented as shift)
 
-        Console.WriteLine($"Whites: {whites}");
-        Console.WriteLine($"Occupied: {occupied}");
-        Console.WriteLine($"{occupied | Occupancy.Empty} -> pieces {(occupied | Occupancy.Empty).ToPieceSet()}");
+        Console.WriteLine($"pieces {important} -> occupied {occupied}");
+
+        Console.WriteLine("\n## Set narrowing");
+        var stuff = occupied | Occupancy.Empty;
+        Console.WriteLine($"occupied set {stuff} -> pieces set {stuff.ToPieceSet()}");
     }
 }

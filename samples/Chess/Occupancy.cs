@@ -13,4 +13,7 @@ public readonly partial struct Occupancy
         /// <summary>No piece on the square.</summary>
         Empty = new(),
     };
+
+    public bool IsEmpty => this == Empty;
+    public bool IsOccupied => this.Tag != Kind.Empty;
 }

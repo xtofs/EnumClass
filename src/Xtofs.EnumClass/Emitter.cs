@@ -94,11 +94,11 @@ namespace Xtofs.EnumClass.Generator
 
             // ---- switchable tag -------------------------------------------------
             o.Line("/// <summary>A plain enum mirroring the members, for <c>switch</c> with constant patterns.</summary>");
-            o.Open($"public enum Tag : {ord}");
+            o.Open($"public enum Kind : {ord}");
             for (int i = 0; i < n; i++) o.Line($"{Id(e.AllNames[i])} = {i},");
             o.Close();
-            o.Line("public Tag ToTag() => (Tag)_ordinal;");
-            o.Line($"public static {self} FromTag(Tag tag) => FromOrdinal((int)tag);").Line();
+            o.Line("public Kind Tag => (Kind)_ordinal;");
+            o.Line($"public static {self} FromTag(Kind tag) => FromOrdinal((int)tag);").Line();
 
             // ---- ordinals -------------------------------------------------------
             o.Line($"public static {self} FromOrdinal(int ordinal) =>")

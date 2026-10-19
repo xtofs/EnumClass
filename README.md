@@ -89,18 +89,18 @@ public readonly partial struct Occupancy
 
 All of it lands in `<Namespace>.<Type>.EnumClass.g.cs` as part of the same struct.
 
-| Piece | Shape | Cost |
-|---|---|---|
-| Representation | single `byte` (≤ 256 members) or `ushort` field | 1–2 bytes, no allocation |
-| Members | `public static Planet Earth => new(2);` | constant |
-| `Row`, `Table` | private input types of `Members`; `Table` has one `Row` property per entry | — |
-| Associated-data property | `get => GetAt(s_Mass)`: array load via `Unsafe.Add`, no bounds check | one load |
-| Columns | filled once from `Members` during type initialization | n·k copies, once |
-| `Name` / `ToString()` | member identifier (unless you declare `Name` yourself) | one load |
-| `Values`, `Count`, `Ordinal`, `FromOrdinal`, `TryFromOrdinal` | | |
-| `Tag` | nested plain `enum` mirror for constant-pattern `switch` | |
-| `TryParse` / `Parse` | minimal perfect hash → one candidate → one comparison | 2 hash passes + 1 compare |
-| `Set` | `k = ⌈n/64⌉` unrolled `ulong` words (`WordCount`, `GetWord`, `FromWords`); `\| & ^ - ~`, `Contains`, `Count` (popcnt), subset/superset/overlap, ref-struct enumerator (tzcnt), collection-expression builder; `Bits`/`FromBits` when n ≤ 64 | branch-free for n ≤ 64 |
+| Piece                                                         | Shape                                                                                                                                                                                                                                       | Cost                      |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| Representation                                                | single `byte` (≤ 256 members) or `ushort` field                                                                                                                                                                                             | 1–2 bytes, no allocation  |
+| Members                                                       | `public static Planet Earth => new(2);`                                                                                                                                                                                                     | constant                  |
+| `Row`, `Table`                                                | private input types of `Members`; `Table` has one `Row` property per entry                                                                                                                                                                  | —                         |
+| Associated-data property                                      | `get => GetFrom(s_Mass)`: array load via `Unsafe.Add`, no bounds check                                                                                                                                                                      | one load                  |
+| Columns                                                       | filled once from `Members` during type initialization                                                                                                                                                                                       | n·k copies, once          |
+| `Name` / `ToString()`                                         | member identifier (unless you declare `Name` yourself)                                                                                                                                                                                      | one load                  |
+| `Values`, `Count`, `Ordinal`, `FromOrdinal`, `TryFromOrdinal` |                                                                                                                                                                                                                                             |                           |
+| `Tag`                                                         | nested plain `enum` mirror for constant-pattern `switch`                                                                                                                                                                                    |                           |
+| `TryParse` / `Parse`                                          | minimal perfect hash → one candidate → one comparison                                                                                                                                                                                       | 2 hash passes + 1 compare |
+| `Set`                                                         | `k = ⌈n/64⌉` unrolled `ulong` words (`WordCount`, `GetWord`, `FromWords`); `\| & ^ - ~`, `Contains`, `Count` (popcnt), subset/superset/overlap, ref-struct enumerator (tzcnt), collection-expression builder; `Bits`/`FromBits` when n ≤ 64 | branch-free for n ≤ 64    |
 
 `Planet | Planet` yields a `Planet.Set`; a `Planet` converts implicitly to a
 singleton `Set`, so `set | Planet.Earth` works too.
@@ -130,19 +130,19 @@ benchmark against a plain `switch` before relying on it.
 
 ## Diagnostics
 
-| ID | Severity | Meaning |
-|---|---|---|
-| EC001 | Error | Target is not a non-nested, non-generic `readonly partial struct` |
-| EC005 | Error | Associated-data property has a setter or is an indexer |
-| EC007 | Error | `Members` initializer assigns no members |
-| EC008 | Warning | Members differ only by ASCII case |
-| EC009 | Error | More than 65 536 members |
-| EC010 | Error | No `Members` property |
-| EC011 | Error | `Members` is not a static property returning one object creation with `Name = expr` entries (a field or method is rejected too) |
-| EC012 | Error | Member name collides with the type, a data property, an existing or a generated member |
-| EC013 | Error | A value name occurs twice (own and included, or in two included types) |
-| EC014 | Error | Invalid include: not an EnumClass, has errors, included twice, cycle, or two included types with the same simple name |
-| EC015 | Error | Data properties on a type with includes |
+| ID    | Severity | Meaning                                                                                                                         |
+| ----- | -------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| EC001 | Error    | Target is not a non-nested, non-generic `readonly partial struct`                                                               |
+| EC005 | Error    | Associated-data property has a setter or is an indexer                                                                          |
+| EC007 | Error    | `Members` initializer assigns no members                                                                                        |
+| EC008 | Warning  | Members differ only by ASCII case                                                                                               |
+| EC009 | Error    | More than 65 536 members                                                                                                        |
+| EC010 | Error    | No `Members` property                                                                                                           |
+| EC011 | Error    | `Members` is not a static property returning one object creation with `Name = expr` entries (a field or method is rejected too) |
+| EC012 | Error    | Member name collides with the type, a data property, an existing or a generated member                                          |
+| EC013 | Error    | A value name occurs twice (own and included, or in two included types)                                                          |
+| EC014 | Error    | Invalid include: not an EnumClass, has errors, included twice, cycle, or two included types with the same simple name           |
+| EC015 | Error    | Data properties on a type with includes                                                                                         |
 
 Duplicate entries are reported by the compiler (CS1912); wrong value types and
 arity by ordinary overload resolution on `Row`'s constructor.
@@ -150,7 +150,7 @@ arity by ordinary overload resolution on `Row`'s constructor.
 ## Precise semantics worth knowing
 
 - `default(Planet)` is the first member (like `enum` value 0). To make `default`
-  invalid instead, store `ordinal + 1` and add a check in `GetAt`.
+  invalid instead, store `ordinal + 1` and add a check in `GetFrom`.
 - The `Members` getter runs **once**, during type initialization. The type is `beforefieldinit`,
   so the runtime runs it no later than the first static-field access (data
   properties, `Name`, `ToString`, `Values`, `TryParse`), possibly earlier; getting a
@@ -158,7 +158,7 @@ arity by ordinary overload resolution on `Row`'s constructor.
   surfaces as `TypeInitializationException` and leaves the type unusable.
 - Inside `Members`, referring to members (`Next = Planet.Earth`) is fine; reading
   their **data** (`Planet.Earth.Mass`) is not — the columns are not filled yet.
-- Static field initializers in *your* part of the struct must not read data
+- Static field initializers in _your_ part of the struct must not read data
   properties either: the order of initializers across partial declarations is
   unspecified.
 - `Members` must be `private`, because `Table` and `Row` are private (anything wider
@@ -173,12 +173,12 @@ arity by ordinary overload resolution on `Row`'s constructor.
 
 ## Repository layout
 
-| Path | Contents |
-|---|---|
-| `src/Xtofs.EnumClass` | The generator and suppressor (`netstandard2.0`, Microsoft.CodeAnalysis.CSharp 4.12) |
-| `samples/Planets` | `Planet`: data properties, including non-constant `TimeSpan` values; sets, parsing, `Tag` |
-| `samples/Chess` | `Piece` with data, and `Occupancy` = `Empty` + every `Piece` via `[Includes<Piece>]` |
-| `samples/GameOfAmazons` | `Square` = `Empty`, `Fire` + every `Amazon`; set tests for blocked squares |
+| Path                    | Contents                                                                                  |
+| ----------------------- | ----------------------------------------------------------------------------------------- |
+| `src/Xtofs.EnumClass`   | The generator and suppressor (`netstandard2.0`, Microsoft.CodeAnalysis.CSharp 4.12)       |
+| `samples/Planets`       | `Planet`: data properties, including non-constant `TimeSpan` values; sets, parsing, `Tag` |
+| `samples/Chess`         | `Piece` with data, and `Occupancy` = `Empty` + every `Piece` via `[Includes<Piece>]`      |
+| `samples/GameOfAmazons` | `Square` = `Empty`, `Fire` + every `Amazon`; set tests for blocked squares                |
 
 The samples reference the generator as a project (`OutputItemType="Analyzer"`).
 
